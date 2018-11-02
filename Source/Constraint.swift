@@ -274,11 +274,28 @@ public final class Constraint {
         let layoutConstraints = self.layoutConstraints
 
         if updatingExisting {
-            var existingLayoutConstraints: [LayoutConstraint] = []
-            for constraint in item.constraints {
-                existingLayoutConstraints += constraint.layoutConstraints
+            let existingLayoutConstraints: [LayoutConstraint] = item.constraints.flatMap({ $0.layoutConstraints })
+            let existingLayoutConstraintsSet = Set(existingLayoutConstraints)
+            
+            let info = ProcessInfo.processInfo
+            let begin = info.systemUptime
+            
+            for layoutConstraint in layoutConstraints {
+                guard let indexOfExistingLayoutConstraint = existingLayoutConstraintsSet.firstIndex(of: layoutConstraint) else {
+                    fatalError("Updated constraint could not find existing matching constraint to update: \(layoutConstraint)")
+                }
+                
+                let existingLayoutConstraint = existingLayoutConstraintsSet[indexOfExistingLayoutConstraint]
+                let updateLayoutAttribute = (existingLayoutConstraint.secondAttribute == .notAnAttribute) ? existingLayoutConstraint.firstAttribute : existingLayoutConstraint.secondAttribute
+                existingLayoutConstraint.constant = self.constant.constraintConstantTargetValueFor(layoutAttribute: updateLayoutAttribute)
             }
-
+            
+            let diff = (info.systemUptime - begin)
+            
+            
+            let info1 = ProcessInfo.processInfo
+            let begin1 = info.systemUptime
+            
             for layoutConstraint in layoutConstraints {
                 let existingLayoutConstraint = existingLayoutConstraints.first { $0 == layoutConstraint }
                 guard let updateLayoutConstraint = existingLayoutConstraint else {
@@ -288,6 +305,12 @@ public final class Constraint {
                 let updateLayoutAttribute = (updateLayoutConstraint.secondAttribute == .notAnAttribute) ? updateLayoutConstraint.firstAttribute : updateLayoutConstraint.secondAttribute
                 updateLayoutConstraint.constant = self.constant.constraintConstantTargetValueFor(layoutAttribute: updateLayoutAttribute)
             }
+            
+            let diff1 = (info1.systemUptime - begin1)
+            
+            print("deff \(diff)")
+            print("diff1 \(diff1)")
+            
         } else {
             NSLayoutConstraint.activate(layoutConstraints)
             item.add(constraints: [self])
